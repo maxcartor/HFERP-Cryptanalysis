@@ -10,59 +10,38 @@ m:=d+o+r+s;                   //n and m added to ease notation
 
 
 function RandomSymmetricMatrix(F,t) 
-
     ans:=RandomMatrix(F,t,t);
-
     return ans+Transpose(ans);
-
 end function;                    // creates a t \times t matrix over GF(q) 
 
 
 function UOVMatrix(F,v,o)
-
     ans:=VerticalJoin(RandomMatrix(F,v,v+o),ZeroMatrix(F,o,v+o));
-
     return ans+Transpose(ans);
-
 end function;                   // creates the single layer Rainbow map
 
 
 function DirectSum(M,N)
-
     return VerticalJoin(HorizontalJoin(M,ZeroMatrix(F,NumberOfRows(M),NumberOfColumns(N))),HorizontalJoin(ZeroMatrix(F,NumberOfRows(N),NumberOfColumns(M)),N));
-
 end function;                   // creates a block matrix where the upper left NumberOfRows(M) \times NumberOfColumns(M) and bottom right NumberOfRows(N) \times NuimberOfColumns(N) are the only nonzero blocks
 
 
 
 L:=[DirectSum(RandomSymmetricMatrix(F,d),ZeroMatrix(F,o,o)): i in [1..d]];
-
 L:=L cat [UOVMatrix(F,d,o): i in [1..o+r]];
-
 L:=L cat [RandomSymmetricMatrix(F,n): i in [1..s]];
-
-
                                 // L created our matrix representation of theb HFERP central map through concatenating the HFE, single layer Rainbow, and random polynomial matrices 
 
 U:=RandomMatrix(F,n,n);
-
 while Rank(U) lt n do
-
     U:=RandomMatrix(F,n,n);
-
 end while;                   // random affine map on input 
 
 
-
 T:=RandomMatrix(F,m,m);
-
 while Rank(T) lt m do
-
     T:=RandomMatrix(F,m,m);
-
 end while;                // random affine map on output of central map 
-
-
 
 
 P:=[&+[T[i][j]*(U*L[i]*Transpose(U)): i in [1..m]]: j in [1..m]];          // public key P=T \circ L \circ U
@@ -70,209 +49,111 @@ P:=[&+[T[i][j]*(U*L[i]*Transpose(U)): i in [1..m]]: j in [1..m]];          // pu
 
 
 function collect(z)
-
     ans:=ZeroMatrix(F,0,n);
-
     for i in [1..m] do
-
         ans:=VerticalJoin(ans,z*P[i]);
-
     end for;
-
     return ans;
-
 end function;                                                            // Used later to create the matrix A_z
 
 
 
 
-
-
-
-
 function get_next_qary(global_qary,dim)
-
     index:=1;
-
     while index le dim and global_qary[index] eq q-1 do
-
         global_qary[index]:=0;
-
         index+:=1;
-
     end while;                                                         
-
     if index le dim then
-
         global_qary[index]+:=1;
-
         waste:=global_qary[index] gt 1;
-
         key_index:=index;
-
         index+:=1;
-
         while waste and index le dim do
-
             waste:=waste and (global_qary[index] eq 0);
-
             index+:=1;
-
         end while;
-
         if waste then
-
             global_qary[key_index]:=0;
-
             if key_index lt dim then
-
                 global_qary[key_index+1]:=1;
-
             end if;
-
         end if;
-
     end if;
-
     return global_qary;
-
 end function;
-
-
 
 
 
 
 
 function search_space(K)
-
     global_qary:=[0: i in [1..Rank(K)]];
-
     found:=false;
-
     vector_list:=[];
-
     while (not found) and global_qary ne [q-1: i in [1..Rank(K)-1]] cat [1] do
-
         global_qary:=get_next_qary(global_qary,Rank(K));
-
         y:=ChangeRing(Matrix([global_qary]),F)*K;
-
         LR:=&+[y[1][i]*P[i]: i in [1..m]];
-
         if Rank(LR) le d then
-
             vector_list:=vector_list cat [y];
-
         end if;
-
     end while;
-
     return vector_list;
-
 end function;                                                      // searches for a y \in F_q^m st y \in ker(A_z) and solves the minrank instance with the public keys with target rank d
 
 
 
-
-
-
-
 function build_HFE_detect_system(L)
-
     M:=ZeroMatrix(F,#L,Binomial(n+1,2)-Binomial(d+1,2));               
-
     for i in [1..#L] do       
-
         index:=1;
-
         for j in [d+1..n] do
-
             for k in [1..j] do
-
-                M[i][index]:=L[i][j][k];
-
+                M[i][index]:=L[i][j][k];\
                 index+:=1;
-
             end for;
-
         end for;
-
     end for;
-
     return KernelMatrix(M);
-
 end function;                                           
 
 
 
-
-
 function build_UOV_detect_system(L)
-
     M:=ZeroMatrix(F,#L,Binomial(o+1,2));
-
     for i in [1..#L] do
-
         index:=1;
-
         for j in [d+1..n] do
-
             for k in [j..n] do
-
                 M[i][index]:=L[i][j][k];
-
                 index+:=1;
-
             end for;
-
         end for;
-
     end for;
-
     return KernelMatrix(M);
-
 end function;
 
 
 
-
-
-
 function search_kernel(K,dim)
-
     ans:=ZeroMatrix(F,1,n);
-
     local_qary:=[0: i in [1..dim]];
-
     found:=false;
-
     while (not found) and local_qary ne [q-1: i in [1..dim-1]] cat [1] do
-
         local_qary:=get_next_qary(local_qary,dim);
-
         y:=ChangeRing(Matrix([local_qary]),F)*K;
-
         M:=ZeroMatrix(F,0,n);
-
         for i in [1..m] do
-
             M:=VerticalJoin(M,y*P[i]);
-
         end for;
-
         if Rank(M) le m-d then
-
             ans:=y;
-
             found:=true;
-
         end if;
-
     end while;
-
     return ans;
-
 end function;
 
 
@@ -280,113 +161,59 @@ end function;
 
 
 function attack()
-
     LRS:=[];
-
     notfound:=true;
-
     iterations:=0;
-
     last_j:=2;
-
     while notfound do
-
         iterations+:=1;
-
         iterations;
-
         z:=RandomMatrix(F,1,n);
-
         Az:=collect(z);
-
         K:=KernelMatrix(Az);                      // K is the kernel of Az
-
         S:=search_space(K);                       // defining the space we look for y is only in the kernel of Az
-
         for index in [1..#S] do
-
             y:=S[index];
-
             LR:=&+[y[1][i]*P[i]: i in [1..m]];
-
             LRS:=LRS cat [LR];
-
         end for;
-
         KA:=ZeroMatrix(F,0,n);
-
         i:=1;
-
         while notfound and i lt #LRS do
-
             j:=Max(i+1,last_j);
-
             while notfound and j le #LRS do
-
                 K1:=KernelMatrix(Transpose(KernelMatrix(LRS[i])));                 
-
                 K2:=KernelMatrix(Transpose(KernelMatrix(LRS[j])));                  
-
                 KA:=KernelMatrix(Transpose(VerticalJoin(K1,K2)));            //B1 in the paper       
-
                 if Rank(KA) ge o then
-
                     notfound:=false;
-
                 end if;
-
                 j+:=1;
-
             end while;
-
             i+:=1;
-
         end while;
-
         last_j:=#LRS+1;
-
     end while;
-
     KB:=KernelMatrix(Transpose(KA));                         //B2 in the paper               
-
     UPinv:=VerticalJoin(KB,KA);                              //Hat(B) in the paper
-
     TPinv:=ZeroMatrix(F,m,m);
-
     PC:=[UPinv*P[i]*Transpose(UPinv): i in [1..m]];          //Hat(b) P_y Hat(B)^\top  
-
     TA:=build_HFE_detect_system(PC);                        
-
     FP:=[];
-
     if Rank(TA) ge d then                                  
-
         TB:=KernelMatrix(Transpose(TA));
-
         F1:=[&+[TA[i][j]*PC[j]: j in [1..m]]: i in [1..Rank(TA)]];
-
         PC2:=[&+[TB[i][j]*PC[j]: j in [1..m]]: i in [1..Rank(TB)]];
-
         TC:=build_UOV_detect_system(PC2);
-
         if Rank(TA)+Rank(TC) ge d+o then
-
             TD:=KernelMatrix(Transpose(TC));
-
             F2:=[&+[TC[i][j]*PC2[j]: j in [1..Rank(TB)]]: i in [1..Rank(TC)]];
-
             F3:=[&+[TD[i][j]*PC2[j]: j in [1..Rank(TB)]]: i in [1..Rank(TD)]];
-
             TPinv:=VerticalJoin(TA,VerticalJoin(TC*TB,TD*TB));
-
             FP:=F1 cat F2 cat F3;
-
         end if;
-
     end if;
-
     return UPinv,TPinv,FP;
-
 end function;                                           // returns the HFE, Rainbow, and plus matrices
 
 
@@ -396,13 +223,9 @@ end function;                                           // returns the HFE, Rain
 FP:=[];
 
 while #FP eq 0 do
-
     cputime:=Cputime();
-
     UPinv,TPinv,FP:=attack();
-
     cputime:=Cputime(cputime);
-
 end while;
 
 cputime;
