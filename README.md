@@ -1,2 +1,2 @@
 # HFERP-Cryptanalysis
-The code associated with HFERP Cryptanalysis Divide and Conquer and Support Minors attacks 
+The code associated with HFERP Cryptanalysis Divide and Conquer and Support Minors attacks presented in Magma code.
