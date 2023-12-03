@@ -1,0 +1,199 @@
+q:=7;
+d:=6;
+o:=3;
+n:=d+o;
+r:=2;
+s:=2;
+m:=d+o+r+s;
+F:=GF(q);
+
+gg<yy>:=IrreduciblePolynomial(F,d);                                            //irreducible poly over GF(q) of degree d to set up the extension 
+reductor:=Submatrix(CompanionMatrix(gg),d,1,1,d);                              // takes the d^(th) row as a d length vector
+
+
+
+function mult(v,w)
+
+    R:=Parent(v[1][1]);                                                      //states the field v[1][1] comes from
+
+    function amult(v)
+        ans:=Matrix([[Zero(R)] cat [v[1][i]: i in [1..d-1]]]);              // creates a d length vector
+        return ans+ChangeRing(reductor,R)*v[1][d];
+    end function;
+
+    ans:=w[1][1]*v;
+
+    for i in [2..d] do
+
+        v:=amult(v);
+
+        ans+:=w[1][i]*v;
+
+    end for;
+
+    return ans;
+
+end function;
+
+
+
+
+function power(v,p)
+
+    if p eq 0 then
+
+        return Matrix([[One(Parent(v[1][1]))] cat [0: i in [1..d-1]]]);
+
+    elif p mod 2 eq 0 then
+
+        return power(mult(v,v),Truncate(p/2));
+
+    else
+
+        return mult(v,power(mult(v,v),Truncate(p/2)));
+
+    end if;
+
+end function;
+
+frob:=ZeroMatrix(F,0,d);
+
+alpha:=Matrix([[0,One(F)] cat [0: i in [1..d-2]]]);
+
+for i in [0..d-1] do
+
+    alphap:=power(power(alpha,i),q);
+
+    frob:=VerticalJoin(frob,alphap);
+
+end for;
+
+R<[x]>:=PolynomialRing(F,n,"grevlex");
+
+SetVerbose("Faugere",1);
+
+function generate_HFE(D)
+
+    i:=0;
+
+    j:=0;
+
+    ans:=[];
+
+    while q^i lt D do
+
+        j:=i;
+
+        while q^i+q^j lt D do
+
+            ans:=ans cat [RandomMatrix(F,1,d)];
+
+            j+:=1;
+
+        end while;
+
+        i+:=1;
+
+    end while;
+
+    return ans;
+
+end function;
+
+function hfe_map(D)
+
+    coeffs:=generate_HFE(D);
+
+    xvec:=Matrix([[x[i]: i in [1..d]]]);
+
+    ans:=ZeroMatrix(R,1,d);
+
+    i:=0;
+
+    index:=1;
+
+    while q^i lt D do
+
+        j:=i;
+
+        while q^i+q^j lt D do
+
+            ans:=ans + mult(ChangeRing(coeffs[index],R),mult(xvec*ChangeRing(frob^i,R),xvec*ChangeRing(frob^j,R)));
+
+            j+:=1;
+
+        end while;
+
+        i+:=1;
+
+    end while;
+
+    return ElementToSequence(ans);
+
+end function;
+
+HFE_pols:=hfe_map(343);
+
+HFE_mats:=[SymmetricMatrix(HFE_pols[i]): i in [1..d]];
+
+UOV_mats:=[VerticalJoin(RandomMatrix(F,d,n),ZeroMatrix(F,o,n)): i in [1..o+r]];
+
+UOV_mats:=[UOV_mats[i]+Transpose(UOV_mats[i]): i in [1..o+r]];
+
+RND_mats:=[RandomMatrix(F,n,n): i in [1..s]];
+
+RND_mats:=[RND_mats[i]+Transpose(RND_mats[i]): i in [1..s]];
+
+PRV_mats:=HFE_mats cat UOV_mats cat RND_mats;
+
+U:=RandomMatrix(F,n,n);
+
+while Rank(U) lt n do
+
+    U:=RandomMatrix(F,n,n);
+
+end while;
+
+T:=RandomMatrix(F,m,m);
+
+while Rank(T) lt m do
+
+    T:=RandomMatrix(F,m,m);
+
+end while;
+
+PUB_mats:=[&+[T[i][j]*(U*PRV_mats[j]*Transpose(U)): j in [1..m]]: i in [1..m]];
+
+PR<[y]>:=PolynomialRing(F,m,"grevlex");
+
+z:=RandomMatrix(F,1,n);
+
+Az:=ZeroMatrix(F,0,n);
+
+for i in [1..m] do
+
+    Az:=VerticalJoin(Az,z*PUB_mats[i]);
+
+end for;
+
+yvec:=Matrix([[y[i]: i in [1..m]]]);
+
+EQS:=ElementToSequence(yvec*ChangeRing(Az,PR));
+
+MINORS:=Minors(&+[y[i]*ChangeRing(Submatrix(PUB_mats[i],1,1,n,n),PR): i in [1..m]],d+1);
+
+EQS:=EQS cat MINORS;
+
+#EQS;
+
+I:=Ideal(EQS);
+
+GB:=GroebnerBasis(I);
+
+dim,vars:=Dimension(I);
+
+I:=Ideal(GB cat [y[vars[i]]-Random(F): i in [1..dim]]);
+
+V:=Variety(I);
+
+[Rank(&+[V[j][i]*PUB_mats[i]: i in [1..m]]): j in [1..#V]];
