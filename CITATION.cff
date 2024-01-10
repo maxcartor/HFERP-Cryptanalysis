@@ -1,4 +1,4 @@
-@software{HFERP_Cryptanalysis,
+@software{HFERP_Cryptanalysis_Code,
   author = {Max Cartor and Ryann Cartor and Hiroki Furue and Daniel Smith-Tone},
   month = {Jan},
   title = {{Magma Code for Improved Cryptanalysis of HFERP}},
